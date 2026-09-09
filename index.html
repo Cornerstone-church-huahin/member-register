@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<!-- saved from url=(0303)https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/v1/design/projects/daa9843c-724f-4a28-a375-981bd6f56385/serve/index.html?t=6ea28eb50ee6022759eed4583cf0dcb9cb4292146d7f3fa97613dfa11fab90c4.45bdb511-1160-4c71-a8f5-68b41fe734eb.7f5ee75f-2730-4fb3-b3df-d02a258ad4cc.1788970046.fp&direct=1 -->
-<html style="color-scheme: light;"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style>
+<!-- saved from url=(0303)https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/v1/design/projects/daa9843c-724f-4a28-a375-981bd6f56385/serve/index.html?t=442835b0906bf68b812510556d878461838a5d3e76a48a243dfc6b898b26430b.45bdb511-1160-4c71-a8f5-68b41fe734eb.7f5ee75f-2730-4fb3-b3df-d02a258ad4cc.1788970555.fp&direct=1 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style>
     .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
       border:1px solid color-mix(in srgb,currentColor 50%,transparent);
       border-radius:2px;box-sizing:border-box;overflow:hidden}
@@ -45,11 +45,11 @@
         animation-play-state: running !important; transition-duration: 0s !important;
       }
     }
-  </style><script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js":"blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/563ec373-e4be-4e77-88c2-8f2d14beaddb","https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js":"blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/f79defbc-cbe4-4bfa-bf4e-2303a6095113"};</script>
+  </style><script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js":"blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/22e0f254-b3d5-4ae4-9530-685ea1e15540","https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js":"blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/9be502fc-a7e0-44ef-9b8e-e05ed33046c9"};</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/ab055104-32b5-4776-acdf-80c80f158098"></script>
-<style>x-dc{display:none!important}</style><script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/563ec373-e4be-4e77-88c2-8f2d14beaddb"></script><script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/f79defbc-cbe4-4bfa-bf4e-2303a6095113"></script><style></style><style>html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}</style></head>
+<script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/29482eac-d900-47cf-a21b-6fcc419a7bcb"></script>
+<style>x-dc{display:none!important}</style><script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/22e0f254-b3d5-4ae4-9530-685ea1e15540"></script><script src="blob:https://daa9843c-724f-4a28-a375-981bd6f56385.claudeusercontent.com/9be502fc-a7e0-44ef-9b8e-e05ed33046c9"></script><style></style><style>html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}</style></head>
 <body>
 <div id="dc-root"><div class="sc-host" data-sc-name="index"><title data-dc-tpl="1">ตรวจสอบคุณสมบัติสมาชิกและการเข้าร่วมนมัสการ</title><link data-dc-tpl="2" rel="preconnect" href="https://fonts.googleapis.com/"><link data-dc-tpl="3" rel="preconnect" href="https://fonts.gstatic.com/"><style data-dc-tpl="4">/* cyrillic-ext */
 @font-face {
@@ -336,9 +336,16 @@ class Component extends DCLogic {
     if (!url) return;
     this.setState({sheetState:'กำลังตรวจสอบรหัสจาก Google Sheet…'});
     try {
-      const res = await fetch(url, {cache:'no-store'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const rows = this.parseCSV(await res.text()).filter(r=>r.some(c=>(c||'').trim()));
+      const ctl = new AbortController();
+      const timer = setTimeout(()=>ctl.abort(), 8000);
+      let text;
+      try {
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now(),
+          {cache:'no-store', signal:ctl.signal});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+      } finally { clearTimeout(timer); }
+      const rows = this.parseCSV(text).filter(r=>r.some(c=>(c||'').trim()));
       const out = [];
       for (const r of rows) {
         const user = (r[0]||'').trim(), pass = (r[1]||'').trim();
@@ -400,12 +407,16 @@ class Component extends DCLogic {
   }
   async gateLogin(){
     const user = this.state.gEmail.trim(), pass = this.state.gPass.trim();
-    // ถ้ามีลิงก์ Sheet แต่ยังไม่ได้โหลดรายชื่อ (หรือโหลดไม่ทัน) ให้รอโหลดก่อนตรวจ
-    if (this.sheetUrl() && !this._remote) {
-      this.setState({gErr:'กำลังตรวจสอบรหัส…'});
-      await this.fetchSheetAccounts();
+    let A = this.accounts();
+    // ผู้ดูแลตรวจก่อนเสมอ ไม่ต้องรอ Google Sheet
+    if (user.toLowerCase() !== A.admin.user.toLowerCase() || pass !== A.admin.pass) {
+      const hit = A.viewers.some(v=>v.user.trim().toLowerCase() === user.toLowerCase() && v.pass.trim() === pass);
+      if (!hit && this.sheetUrl() && !this._remote) {
+        this.setState({gErr:'กำลังตรวจสอบรหัส…'});
+        await this.fetchSheetAccounts();
+        A = this.accounts();
+      }
     }
-    const A = this.accounts();
     if (user.toLowerCase() === A.admin.user.toLowerCase() && pass === A.admin.pass) {
       try { sessionStorage.setItem('wr-who', 'admin:'+user); } catch(e){}
       this.setState({gate:false, gErr:''});
